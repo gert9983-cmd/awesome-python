@@ -33,7 +33,12 @@ Usage: python fetch_pypi_downloads_via_clickpy.py
 
 import json
 import re
-from datetime import UTC, datetime
+try:
+    from datetime import UTC
+except ImportError:
+    from datetime import timezone
+    UTC = timezone.utc
+from datetime import datetime
 from pathlib import Path
 
 import httpx

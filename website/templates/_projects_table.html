@@ -25,6 +25,177 @@
         aria-label="Search projects"
       />
     </div>
+
+    <div class="sheets-bar" aria-label="Google Sheets integration">
+      <div class="sheets-bar-summary">
+        <span class="sheets-bar-title">Google Sheets</span>
+        <span class="sheets-bar-copy" id="sheets-status-text">
+          Export filtered projects to a spreadsheet, filter the table, or sync project rows from a sheet into the library index.
+        </span>
+        <span class="source-badge" id="sheets-sync-badge" hidden></span>
+        <span class="sheets-filter-active" id="sheets-active-filter" hidden>
+          <span id="sheets-active-filter-label"></span>
+          <button type="button" class="sheets-link-btn" id="sheets-clear-filter-btn">Clear sheet filter</button>
+        </span>
+      </div>
+
+      <div class="sheets-bar-actions">
+        <div id="sheets-auth-logged-out" class="sheets-auth-group">
+          <button type="button" class="gsi-material-button" id="google-signin-btn">
+            <div class="gsi-material-button-state"></div>
+            <div class="gsi-material-button-content-wrapper">
+              <div class="gsi-material-button-icon" aria-hidden="true">
+                <svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" xmlns:xlink="http://www.w3.org/1999/xlink">
+                  <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path>
+                  <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"></path>
+                  <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"></path>
+                  <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"></path>
+                  <path fill="none" d="M0 0h48v48H0z"></path>
+                </svg>
+              </div>
+              <span class="gsi-material-button-contents">Sign in with Google</span>
+            </div>
+          </button>
+          <button
+            type="button"
+            class="tag sheets-action-pill"
+            id="sheets-toggle-workspace-btn"
+            aria-expanded="false"
+            aria-controls="sheets-workspace-panel"
+          >
+            Sheets workspace
+          </button>
+        </div>
+
+        <div id="sheets-auth-logged-in" class="sheets-auth-group" hidden>
+          <span class="source-badge" id="sheets-user-badge"></span>
+          <button
+            type="button"
+            class="tag sheets-action-pill"
+            id="sheets-open-export-btn"
+          >
+            Export to new Sheet
+          </button>
+          <button
+            type="button"
+            class="tag sheets-action-pill"
+            id="sheets-open-existing-btn"
+          >
+            Existing Sheet&hellip;
+          </button>
+          <button type="button" class="sheets-link-btn" id="google-signout-btn">
+            Sign out
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="sheets-panel" id="sheets-workspace-panel" hidden>
+      <div class="sheets-panel-grid">
+        <div class="sheets-panel-block">
+          <h3 class="sheets-panel-heading">Export visible rows to a new Google Sheet</h3>
+          <p class="sheets-panel-desc">
+            Creates a new spreadsheet in your Google Drive with the currently visible projects, download counts, stars, commit dates, and tags.
+          </p>
+          <div class="sheets-form-row">
+            <label for="sheets-new-title" class="sheets-label">Spreadsheet title</label>
+            <input
+              type="text"
+              id="sheets-new-title"
+              class="sheets-input"
+              value="Awesome Python Shortlist"
+              placeholder="Awesome Python Shortlist"
+            />
+            <button type="button" class="tag sheets-primary-pill" id="sheets-prepare-create-btn">
+              Review &amp; create Sheet
+            </button>
+          </div>
+        </div>
+
+        <div class="sheets-panel-block">
+          <div class="sheets-panel-header-row">
+            <h3 class="sheets-panel-heading">Sync, read, or update an existing Google Sheet</h3>
+            <button type="button" class="sheets-link-btn" id="sheets-refresh-files-btn">
+              Refresh Drive list
+            </button>
+          </div>
+          <p class="sheets-panel-desc">
+            Pick a spreadsheet from Google Drive or paste a Spreadsheet ID/URL, then choose a sheet tab to sync project rows into the library index, filter by column A, or write current results.
+          </p>
+          <div class="sheets-form-row">
+            <label for="sheets-file-select" class="sheets-label">Spreadsheet</label>
+            <select id="sheets-file-select" class="sheets-select" aria-label="Select a Google Spreadsheet from Drive">
+              <option value="">Select a spreadsheet from Drive&hellip;</option>
+            </select>
+            <input
+              type="text"
+              id="sheets-custom-id"
+              class="sheets-input"
+              placeholder="Or paste Spreadsheet URL or ID"
+              aria-label="Spreadsheet URL or ID"
+            />
+            <button type="button" class="tag sheets-action-pill" id="sheets-load-tabs-btn">
+              Load tabs
+            </button>
+          </div>
+
+          <div class="sheets-form-row" id="sheets-tab-row" hidden>
+            <label for="sheets-tab-select" class="sheets-label">Sheet tab</label>
+            <select id="sheets-tab-select" class="sheets-select" aria-label="Select sheet tab"></select>
+            <button type="button" class="tag sheets-primary-pill" id="sheets-sync-index-btn">
+              Sync Sheet to library index
+            </button>
+            <button
+              type="button"
+              class="tag sheets-action-pill"
+              id="sheets-autosync-btn"
+              aria-pressed="false"
+            >
+              Background auto-sync: Off
+            </button>
+            <button type="button" class="tag sheets-action-pill" id="sheets-import-filter-btn">
+              Filter table by tab (column A)
+            </button>
+            <button type="button" class="tag sheets-action-pill" id="sheets-prepare-overwrite-btn">
+              Write visible rows to tab&hellip;
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div
+        class="sheets-confirm"
+        id="sheets-confirm-dialog"
+        role="alertdialog"
+        aria-modal="false"
+        aria-labelledby="sheets-confirm-title"
+        aria-describedby="sheets-confirm-desc"
+        hidden
+      >
+        <p class="sheets-confirm-title" id="sheets-confirm-title">Confirm Google Sheets update</p>
+        <p class="sheets-confirm-desc" id="sheets-confirm-desc"></p>
+        <div class="sheets-confirm-actions">
+          <button type="button" class="tag sheets-primary-pill" id="sheets-confirm-proceed-btn">
+            Confirm
+          </button>
+          <button type="button" class="tag sheets-action-pill" id="sheets-confirm-cancel-btn">
+            Cancel
+          </button>
+        </div>
+      </div>
+
+      <div class="sheets-feedback" id="sheets-feedback" role="status" aria-live="polite" hidden>
+        <span id="sheets-feedback-message"></span>
+        <a
+          id="sheets-feedback-link"
+          class="sheets-feedback-link"
+          href="#"
+          target="_blank"
+          rel="noopener"
+          hidden
+        >Open in Google Sheets &nearr;</a>
+      </div>
+    </div>
   </div>
 
   <h2 class="sr-only">Results</h2>

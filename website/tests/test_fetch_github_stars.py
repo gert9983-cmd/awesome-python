@@ -1,7 +1,11 @@
 """Tests for fetch_github_stars module."""
 
 import json
-from datetime import UTC
+try:
+    from datetime import UTC
+except ImportError:
+    from datetime import timezone
+    UTC = timezone.utc
 
 from fetch_github_stars import (
     build_graphql_query,

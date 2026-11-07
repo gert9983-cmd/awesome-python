@@ -8,7 +8,12 @@ import subprocess
 import xml.etree.ElementTree as ET
 from collections import Counter
 from collections.abc import Sequence
-from datetime import UTC, datetime
+try:
+    from datetime import UTC
+except ImportError:
+    from datetime import timezone
+    UTC = timezone.utc
+from datetime import datetime
 from pathlib import Path
 from typing import TypedDict
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
@@ -186,6 +191,100 @@ def load_downloads(path: Path) -> dict[str, int]:
         if len(parts) >= 3 and parts[2].isdigit():
             downloads[parts[0]] = int(parts[2])
     return downloads
+
+
+def load_sheet_projects(path: Path) -> list[dict]:
+    """Load synced Google Sheets project records from JSON cache if present."""
+    if not path.exists():
+        return []
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+        if isinstance(raw, dict) and isinstance(raw.get("projects"), list):
+            return raw["projects"]
+        if isinstance(raw, list):
+            return raw
+    except (json.JSONDecodeError, OSError):
+        return []
+    return []
+
+
+def merge_sheet_projects(
+    entries: list[TemplateEntry],
+    sheet_projects: Sequence[dict],
+    categories: Sequence[ParsedSection],
+    groups: Sequence[ParsedGroup],
+) -> list[TemplateEntry]:
+    """Merge synced Google Sheet project rows into the library index entries."""
+    if not sheet_projects:
+        return entries
+
+    cat_names = {cat["name"] for cat in categories}
+    cat_to_group = {cat["name"]: group["name"] for group in groups for cat in group["categories"]}
+    default_cat = categories[0]["name"] if categories else "Miscellaneous"
+    default_group = cat_to_group.get(default_cat, "Other")
+
+    by_key: dict[str, TemplateEntry] = {
+        entry_name_key(e["name"]): e for e in entries
+    }
+
+    for sp in sheet_projects:
+        name = str(sp.get("name", "")).strip()
+        if not name:
+            continue
+        key = entry_name_key(name)
+        if not key:
+            continue
+
+        existing = by_key.get(key)
+        if existing is not None:
+            if sp.get("url"):
+                existing["url"] = str(sp["url"]).strip()
+            if sp.get("downloads") is not None:
+                existing["downloads"] = int(sp["downloads"])
+            if sp.get("stars") is not None:
+                existing["stars"] = int(sp["stars"])
+            if sp.get("last_commit_at"):
+                existing["last_commit_at"] = str(sp["last_commit_at"]).strip()
+            if sp.get("description"):
+                existing["description"] = str(sp["description"]).strip()
+            for tag in sp.get("tags") or []:
+                if tag in cat_names and tag not in existing["categories"]:
+                    existing["categories"].append(tag)
+                    grp = cat_to_group.get(tag)
+                    if grp and grp not in existing["groups"]:
+                        existing["groups"].append(grp)
+        else:
+            url = str(sp.get("url") or f"https://pypi.org/project/{name}/").strip()
+            matched_cats = [t for t in (sp.get("tags") or []) if t in cat_names]
+            if not matched_cats:
+                matched_cats = [default_cat]
+            matched_groups = []
+            for c_name in matched_cats:
+                grp = cat_to_group.get(c_name, default_group)
+                if grp not in matched_groups:
+                    matched_groups.append(grp)
+            repo_key = extract_github_repo(url)
+            owner = repo_key.split("/", 1)[0] if repo_key else None
+            new_entry = TemplateEntry(
+                name=name,
+                url=url,
+                description=str(sp.get("description") or "").strip(),
+                categories=matched_cats,
+                groups=matched_groups,
+                subcategories=[],
+                stars=int(sp["stars"]) if sp.get("stars") is not None else None,
+                downloads=int(sp["downloads"]) if sp.get("downloads") is not None else None,
+                owner=owner,
+                last_commit_at=str(sp["last_commit_at"]).strip() if sp.get("last_commit_at") else None,
+                source_type=detect_source_type(url),
+                bundled=False,
+                badge=None,
+                also_see=[],
+            )
+            entries.append(new_entry)
+            by_key[key] = new_entry
+
+    return entries
 
 
 def sort_entries(entries: Sequence[TemplateEntry]) -> list[TemplateEntry]:
@@ -810,6 +909,10 @@ def build(repo_root: Path) -> None:
             entry["downloads"] = downloads_data.get(normalize(entry["name"]))
         entry["badge"] = pypi_badges.get(normalize(entry["name"]))
 
+    sheet_projects = load_sheet_projects(website / "data" / "google_sheets_projects.json")
+    if sheet_projects:
+        entries = merge_sheet_projects(entries, sheet_projects, categories, parsed_groups)
+
     entries = sort_entries(entries)
     category_urls = {cat["name"]: category_path(cat) for cat in categories}
 
@@ -997,6 +1100,10 @@ def build(repo_root: Path) -> None:
     static_dst = site_dir / "static"
     if static_src.exists():
         shutil.copytree(static_src, static_dst, dirs_exist_ok=True)
+
+    firebase_config_src = repo_root / "firebase-applet-config.json"
+    if firebase_config_src.exists():
+        shutil.copyfile(firebase_config_src, site_dir / "firebase-applet-config.json")
 
     llms_template = (website / "templates" / "llms.txt").read_text(encoding="utf-8")
     llms_txt = build_llms_txt(

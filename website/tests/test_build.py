@@ -7,7 +7,12 @@ import shutil
 import subprocess
 import textwrap
 import xml.etree.ElementTree as ET
-from datetime import UTC, date, datetime
+try:
+    from datetime import UTC
+except ImportError:
+    from datetime import timezone
+    UTC = timezone.utc
+from datetime import date, datetime
 from html.parser import HTMLParser
 from pathlib import Path
 
